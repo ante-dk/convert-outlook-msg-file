@@ -12,6 +12,7 @@
 # https://msdn.microsoft.com/en-us/library/ee157583(v=exchg.80).aspx
 # https://blogs.msdn.microsoft.com/openspecification/2009/11/06/msg-file-format-part-1/
 
+import argparse
 import re
 import os
 import sys
@@ -824,19 +825,16 @@ property_tags = {
 
 # COMMAND-LINE ENTRY POINT
 
+def msg2eml():
+    parser = argparse.ArgumentParser(description="Convert .msg to .eml")
+    parser.add_argument("msg_file", help="Path to the .msg file")
+
+    args = parser.parse_args()
+    eml = load(args.msg_file)
+
+    eml_filename = args.msg_file.removesuffix(".msg") + ".eml"
+    with open(eml_filename, "wb") as f:
+        f.write(eml.as_bytes())
 
 if __name__ == "__main__":
-    # If no command-line arguments are given, convert the .msg
-    # file on STDIN to .eml format on STDOUT.
-    if len(sys.argv) <= 1:
-        print(load(sys.stdin), file=sys.stdout)
-
-    # Otherwise, for each file mentioned on the command-line,
-    # convert it and save it to a file with ".eml" appended
-    # to the name.
-    else:
-        for fn in sys.argv[1:]:
-            print(fn + "...")
-            msg = load(fn)
-            with open(fn + ".eml", "wb") as f:
-                f.write(msg.as_bytes())
+    msg2eml()
