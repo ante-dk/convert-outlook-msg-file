@@ -1,6 +1,6 @@
 import setuptools
 
-install_requires = ["compoundfiles", "compressed_rtf", "RTFDE"]
+install_requires = ["compoundfiles", "compressed_rtf"]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -16,7 +16,7 @@ setuptools.setup(
     install_requires=install_requires,
     long_description=long_description,
     long_description_content_type="text/markdown",
-    python_requires=">=3.6",
+    python_requires='>=3.6',
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
