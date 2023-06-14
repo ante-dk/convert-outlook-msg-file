@@ -1,3 +1,2 @@
 compoundfiles
 compressed-rtf
-RTFDE

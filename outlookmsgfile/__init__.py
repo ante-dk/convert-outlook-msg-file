@@ -12,18 +12,18 @@
 # https://msdn.microsoft.com/en-us/library/ee157583(v=exchg.80).aspx
 # https://blogs.msdn.microsoft.com/openspecification/2009/11/06/msg-file-format-part-1/
 
-import email.message
-import email.parser
-import email.policy
-import os
+import argparse
 import re
+import os
 import sys
-from email.utils import formataddr, formatdate, parsedate_to_datetime
+
 from functools import reduce
 
+import email.message, email.parser, email.policy
+from email.utils import parsedate_to_datetime, formatdate, formataddr
+
 import compoundfiles
-import compressed_rtf
-from RTFDE.deencapsulate import DeEncapsulator
+
 
 # MAIN FUNCTIONS
 
@@ -100,31 +100,8 @@ def load_message_stream(entry, is_top_level, doc):
                 msg["Subject"] = props["SUBJECT"]
             del props["SUBJECT"]
 
-    # prefer the RTF body if available
-    rtf = props.get("RTF_COMPRESSED")
-    if rtf:
-        # Decompress the value to Rich Text Format.
-        try:
-            rtf = compressed_rtf.decompress(rtf)
-
-            rtf_obj = DeEncapsulator(rtf)
-            rtf_obj.deencapsulate()
-
-            if msg.get_content_maintype() == "multipart":
-                if rtf_obj.content_type == "html":
-                    msg.add_attachment(rtf_obj.html)
-                else:
-                    msg.add_attachment(rtf_obj.text)
-            else:
-                if rtf_obj.content_type == "html":
-                    msg.set_content(rtf_obj.html, subtype="html", cte="8bit")
-                else:
-                    msg.set_content(rtf_obj.text, cte="8bit")
-        except Exception as e:
-            print("Failed to handle RTF message body")
-            msg.set_content("-- RTF Decode Failure --")
-    # otherwise fall back to the plaintext body
-    elif "BODY" in props:
+    # Add the plain-text body from the BODY field.
+    if "BODY" in props:
         body = props["BODY"]
         if msg.get_content_maintype() == "multipart":
             msg.add_attachment(body)
@@ -133,8 +110,23 @@ def load_message_stream(entry, is_top_level, doc):
                 msg.set_content(body, cte="quoted-printable")
             else:
                 msg.set_content(body, maintype="text", subtype="plain", cte="8bit")
+
+    # Plain-text is not availabe. Use the rich text version.
     else:
-        msg.set_content("-- EMPTY MESSAGE --")
+        doc.rtf_attachments += 1
+        fn = "messagebody_{}.rtf".format(doc.rtf_attachments)
+
+        # Decompress the value to Rich Text Format.
+        import compressed_rtf
+
+        rtf = props.get("RTF_COMPRESSED")
+        if rtf:
+            rtf = compressed_rtf.decompress(rtf)
+            # Add RTF file as an attachment.
+            msg.add_attachment(rtf, maintype="text", subtype="rtf", filename=fn)
+            # msg.set_content("<no plain text message body --- see attachment {}>".format(fn), cte="quoted-printable")
+        else:
+            msg.set_content("-- EMPTY MESSAGE --")
 
     # # Copy over string values of remaining properties as headers
     # # so we don't lose any information.
@@ -833,19 +825,16 @@ property_tags = {
 
 # COMMAND-LINE ENTRY POINT
 
+def msg2eml():
+    parser = argparse.ArgumentParser(description="Convert .msg to .eml")
+    parser.add_argument("msg_file", help="Path to the .msg file")
+
+    args = parser.parse_args()
+    eml = load(args.msg_file)
+
+    eml_filename = args.msg_file.removesuffix(".msg") + ".eml"
+    with open(eml_filename, "wb") as f:
+        f.write(eml.as_bytes())
 
 if __name__ == "__main__":
-    # If no command-line arguments are given, convert the .msg
-    # file on STDIN to .eml format on STDOUT.
-    if len(sys.argv) <= 1:
-        print(load(sys.stdin), file=sys.stdout)
-
-    # Otherwise, for each file mentioned on the command-line,
-    # convert it and save it to a file with ".eml" appended
-    # to the name.
-    else:
-        for fn in sys.argv[1:]:
-            print(fn + "...")
-            msg = load(fn)
-            with open(fn + ".eml", "wb") as f:
-                f.write(msg.as_bytes())
+    msg2eml()
