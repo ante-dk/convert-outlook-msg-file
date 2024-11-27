@@ -15,7 +15,7 @@ with open(f"{setup_path}/README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="convert-outlook-msg-file",
+    name="outlookmsgfile",
     version="0.2.0",
     description="Parse Microsoft Outlook MSG files",
     author="Joshua Tauberer",
