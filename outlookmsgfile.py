@@ -137,7 +137,7 @@ def load_message_stream(entry, is_top_level, doc):
       if not has_body:
         # Try to convert that to plain/text if possible.
         text_body = html2text.html2text(html_body)
-        msg.set_content(text_body, subtype="text", cte='quoted-printable')
+        msg.set_content(text_body, subtype="plain", cte='quoted-printable')
         has_body = True
 
       if not has_body:
